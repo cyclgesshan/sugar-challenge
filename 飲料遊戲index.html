@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>飲品糖量大挑戰：抵嘉顧營養</title>
+  <style>
+    /* 保持原有樣式並微調動畫 */
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: #fff5f5; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; position: relative; }
+    .header { text-align: center; margin-bottom: 20px; }
+    .message { font-size: 1.8rem; font-weight: bold; color: #c026d3; height: 60px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 10px; }
+    .game-container { display: flex; gap: 30px; max-width: 1300px; width: 100%; align-items: flex-start; margin-bottom: 80px; }
+    .question-area { flex: 1; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 5px solid #f0abfc; text-align: center; }
+    .drink-display-flex { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; height: 300px; }
+    .drink-container { flex: 2; height: 100%; display: flex; align-items: center; justify-content: center; background: #fffbff; border-radius: 15px; border: 1px solid #fdf4ff; }
+    .drink-image { max-height: 95%; max-width: 95%; object-fit: contain; }
+    .drink-info-box { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #fdf4ff; border: 2px solid #f0abfc; border-radius: 15px; height: 100%; padding: 10px; }
+    .drink-name { font-size: 2rem; color: #701a75; font-weight: bold; margin-bottom: 10px; }
+    .drink-vol { font-size: 1.5rem; color: #d946ef; font-weight: bold; }
+    .btn-next { background: #64748b; color: white; border: none; padding: 10px 15px; border-radius: 12px; cursor: pointer; font-size: 1.1rem; font-weight: bold; writing-mode: vertical-lr; letter-spacing: 5px; transition: 0.2s; height: 100%; }
+    .btn-next:hover { background: #475569; transform: scale(1.03); }
+    .answer-tray { min-height: 260px; max-width: 850px; margin: 0 auto; background: #fdf4ff; border: 3px dashed #d946ef; border-radius: 15px; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; padding: 10px; gap: 0; }
+    .cube-count { font-size: 2.2rem; color: #701a75; margin-top: 20px; font-weight: bold; }
+    .control-panel { width: 350px; display: flex; flex-direction: column; gap: 15px; }
+    .cube-button { background: white; border: 4px solid #e2e8f0; border-radius: 15px; padding: 25px; cursor: pointer; transition: all 0.2s; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .cube-button:active { transform: scale(0.95); }
+    .cube-button img { width: 150px; height: 150px; object-fit: contain; }
+    .cube-button p { margin: 15px 0 0 0; font-weight: bold; color: #475569; font-size: 1.4rem; }
+    .btn-submit { background: #d946ef; color: white; border: none; padding: 20px; font-size: 1.6rem; border-radius: 15px; cursor: pointer; font-weight: bold; }
+    .btn-submit:hover { background: #c026d3; }
+    .btn-secret { background: #0ea5e9; color: white; border: none; padding: 18px; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 1.2rem; }
+    .btn-analysis { background: #f59e0b; color: white; border: none; padding: 18px; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 1.2rem; display: none; animation: pop 0.3s; }
+    
+    /* 改進的彈跳動畫 */
+    .sugar-cube-icon { width: 100px; height: 100px; object-fit: contain; margin: -10px -5px; animation: popBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; }
+    
+    .footer-msg { position: fixed; bottom: 15px; right: 20px; display: flex; align-items: center; gap: 20px; background: rgba(255, 255, 255, 0.95); padding: 10px 25px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1.5px solid #f0abfc; }
+    .footer-unit { display: flex; align-items: center; gap: 10px; font-weight: bold; color: #475569; font-size: 1.1rem; }
+    .footer-icon { height: 40px; width: auto; object-fit: contain; }
+    .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 100; }
+    .close-overlay { position: absolute; top: 15px; right: 25px; color: #fff; font-size: 4rem; cursor: pointer; }
+
+    @keyframes popBounce {
+      0% { transform: scale(0); }
+      70% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+
+  <audio id="successSound" src="success.mp3" preload="auto"></audio>
+  <audio id="failSound" src="fail.mp3" preload="auto"></audio>
+  <audio id="clickSound" src="click.mp3" preload="auto"></audio>
+
+  <div class="header">
+    <div class="message" id="msg">🔍 猜猜這瓶飲料含有幾顆方糖？</div>
+  </div>
+
+  <div class="game-container">
+    <div class="question-area">
+      <div class="drink-display-flex">
+        <div class="drink-container">
+          <img id="drinkImg" class="drink-image" src="" alt="飲品圖檔">
+        </div>
+        <div class="drink-info-box">
+          <div class="drink-name" id="displayName">載入中...</div>
+          <div class="drink-vol" id="displayVol">-</div>
+        </div>
+        <button class="btn-next" onclick="resetGame()">換一瓶挑戰</button>
+      </div>
+      
+      <div class="answer-tray" id="tray"></div>
+      <div class="cube-count">已放入：<span id="currentCount">0</span> 顆方糖</div>
+      <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 5px;">(點擊作答區內的方糖可移除)</p>
+    </div>
+
+    <div class="control-panel">
+      <div class="cube-button" onclick="addSugar()">
+        <p>點選增加方糖</p>
+        <img src="方糖.png" alt="方糖按鈕">
+      </div>
+      <button class="btn-submit" id="submitBtn" onclick="checkAnswer()">提交作答</button>
+      <button id="analysisBtn" class="btn-analysis" onclick="showAnalysis()">💡 解析此飲品</button>
+      <button class="btn-secret" onclick="showTotalSecret()">糖量大解密</button>
+    </div>
+  </div>
+
+  <div class="footer-msg">
+    <div class="footer-unit">
+      <img src="嘉義縣衛生局.png" class="footer-icon" alt="衛生局標誌">
+      <span>嘉義縣衛生局</span>
+    </div>
+    <div class="footer-unit">
+      <img src="社區營養推廣中心.png" class="footer-icon" alt="推廣中心標誌">
+      <span>嘉義縣社區營養推廣中心</span>
+    </div>
+    <div class="footer-unit" style="color: #d946ef;">關心您</div>
+  </div>
+
+  <div id="overlay" class="overlay">
+    <span class="close-overlay" onclick="closeOverlay()">&times;</span>
+    <img id="overlayImg" src="" alt="解析圖檔" style="max-width: 90%; max-height: 90%;">
+  </div>
+
+  <script>
+    const drinkData = [
+      { name: '養樂多', vol: '100ml', sugar: 3, file: '1養樂多.png', analysis: '1養樂多解析.png' },
+      { name: '調味乳', vol: '200ml', sugar: 4, file: '2調味乳.png', analysis: '2調味乳解析.png' },
+      { name: '微糖多多綠', vol: '700ml', sugar: 9, file: '3微糖多多綠.png', analysis: '3微糖多多綠解析.png' },
+      { name: '半糖冰淇淋紅茶', vol: '700ml', sugar: 9, file: '4半糖冰淇淋紅茶.png', analysis: '4半糖冰淇淋紅茶解析.png' },
+      { name: '無糖鮮奶茶', vol: '700ml', sugar: 1, file: '5無糖鮮奶茶.png', analysis: '5無糖鮮奶茶解析.png' },
+      { name: '可樂', vol: '450ml', sugar: 9, file: '6可樂.png', analysis: '6可樂解析.png' },
+      { name: '無糖甘蔗青', vol: '700ml', sugar: 5, file: '7無糖甘蔗青.png', analysis: '7無糖甘蔗青解析.png' },
+      { name: '半糖檸檬多多', vol: '700ml', sugar: 16, file: '8半糖檸檬多多.png', analysis: '8半糖檸檬多多解析.png' },
+      { name: '半糖珍珠紅茶拿鐵', vol: '700ml', sugar: 11, file: '9半糖珍珠紅茶拿鐵.png', analysis: '9半糖珍珠紅茶拿鐵解析.png' }
+    ];
+
+    let currentDrink = null;
+    let userSugarCount = 0;
+
+    // 播放點擊特效音的輔助函式
+    function playClickSfx() {
+      const clickSfx = document.getElementById('clickSound');
+      clickSfx.currentTime = 0; // 重置時間點以利連續點擊
+      clickSfx.play().catch(e => console.log("Audio playback blocked by browser"));
+    }
+
+    function resetGame() {
+      userSugarCount = 0;
+      document.getElementById('tray').innerHTML = '';
+      updateCounter();
+      document.getElementById('msg').innerText = "🔍 猜猜這瓶飲料含有幾顆方糖？";
+      document.getElementById('msg').style.color = "#c026d3";
+      document.getElementById('analysisBtn').style.display = 'none';
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('submitBtn').style.opacity = "1";
+      
+      let nextDrink;
+      do {
+        nextDrink = drinkData[Math.floor(Math.random() * drinkData.length)];
+      } while (nextDrink === currentDrink);
+      
+      currentDrink = nextDrink;
+      document.getElementById('drinkImg').src = currentDrink.file;
+      document.getElementById('displayName').innerText = currentDrink.name;
+      document.getElementById('displayVol').innerText = currentDrink.vol;
+    }
+
+    function addSugar() {
+      if (userSugarCount >= 25) return;
+      
+      playClickSfx(); // 播放音效
+      
+      userSugarCount++;
+      updateCounter();
+      
+      const cube = document.createElement('img');
+      cube.src = '方糖.png';
+      cube.className = 'sugar-cube-icon';
+      cube.onclick = function() {
+        playClickSfx(); // 移除時也播放音效
+        this.remove();
+        userSugarCount--;
+        updateCounter();
+      };
+      document.getElementById('tray').appendChild(cube);
+    }
+
+    function updateCounter() {
+      document.getElementById('currentCount').innerText = userSugarCount;
+    }
+
+    function checkAnswer() {
+      const msgEl = document.getElementById('msg');
+      const sfxSuccess = document.getElementById('successSound');
+      const sfxFail = document.getElementById('failSound');
+
+      if (userSugarCount === currentDrink.sugar) {
+        sfxSuccess.currentTime = 0;
+        sfxSuccess.play();
+        msgEl.innerHTML = `✅ 答對了！<b>${currentDrink.name}</b> 的糖量約為 <b>${currentDrink.sugar}</b> 顆方糖！`;
+        msgEl.style.color = "#16a34a";
+      } else {
+        sfxFail.currentTime = 0;
+        sfxFail.play();
+        const hint = userSugarCount > currentDrink.sugar ? "太多囉" : "太少囉";
+        msgEl.innerHTML = `❌ ${hint}！<b>${currentDrink.name}</b> 正確答案是 <b>${currentDrink.sugar}</b> 顆方糖！`;
+        msgEl.style.color = "#dc2626";
+      }
+      document.getElementById('analysisBtn').style.display = 'block';
+      document.getElementById('submitBtn').disabled = true;
+      document.getElementById('submitBtn').style.opacity = "0.5";
+    }
+
+    function showAnalysis() {
+      document.getElementById('overlayImg').src = currentDrink.analysis;
+      document.getElementById('overlay').style.display = 'flex';
+    }
+
+    function showTotalSecret() {
+      document.getElementById('overlayImg').src = '飲品糖量大解密.png';
+      document.getElementById('overlay').style.display = 'flex';
+    }
+
+    function closeOverlay() {
+      document.getElementById('overlay').style.display = 'none';
+    }
+
+    resetGame();
+  </script>
+</body>
+</html>

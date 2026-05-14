@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>飲品糖量大挑戰：抵嘉顧營養</title>
   <style>
-    /* 保持原有樣式並微調動畫 */
+    /* 基礎樣式保持不變 */
     * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
     body { margin: 0; background: #fff5f5; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; position: relative; }
     .header { text-align: center; margin-bottom: 20px; }
@@ -27,12 +27,12 @@
     .cube-button:active { transform: scale(0.95); }
     .cube-button img { width: 150px; height: 150px; object-fit: contain; }
     .cube-button p { margin: 15px 0 0 0; font-weight: bold; color: #475569; font-size: 1.4rem; }
-    .btn-submit { background: #d946ef; color: white; border: none; padding: 20px; font-size: 1.6rem; border-radius: 15px; cursor: pointer; font-weight: bold; }
-    .btn-submit:hover { background: #c026d3; }
+    .btn-submit { background: #d946ef; color: white; border: none; padding: 20px; font-size: 1.6rem; border-radius: 15px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+    .btn-submit:hover:not(:disabled) { background: #c026d3; }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-secret { background: #0ea5e9; color: white; border: none; padding: 18px; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 1.2rem; }
-    .btn-analysis { background: #f59e0b; color: white; border: none; padding: 18px; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 1.2rem; display: none; animation: pop 0.3s; }
+    .btn-analysis { background: #f59e0b; color: white; border: none; padding: 18px; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 1.2rem; display: none; animation: popBounce 0.4s ease; }
     
-    /* 改進的彈跳動畫 */
     .sugar-cube-icon { width: 100px; height: 100px; object-fit: contain; margin: -10px -5px; animation: popBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; }
     
     .footer-msg { position: fixed; bottom: 15px; right: 20px; display: flex; align-items: center; gap: 20px; background: rgba(255, 255, 255, 0.95); padding: 10px 25px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1.5px solid #f0abfc; }
@@ -119,23 +119,30 @@
 
     let currentDrink = null;
     let userSugarCount = 0;
+    let attempts = 0; // 紀錄當前題目的嘗試次數
 
-    // 播放點擊特效音的輔助函式
     function playClickSfx() {
       const clickSfx = document.getElementById('clickSound');
-      clickSfx.currentTime = 0; // 重置時間點以利連續點擊
-      clickSfx.play().catch(e => console.log("Audio playback blocked by browser"));
+      clickSfx.currentTime = 0;
+      clickSfx.play().catch(e => console.log("Audio blocked"));
     }
 
     function resetGame() {
       userSugarCount = 0;
+      attempts = 0; // 重置嘗試次數
       document.getElementById('tray').innerHTML = '';
       updateCounter();
-      document.getElementById('msg').innerText = "🔍 猜猜這瓶飲料含有幾顆方糖？";
-      document.getElementById('msg').style.color = "#c026d3";
+      
+      const msgEl = document.getElementById('msg');
+      msgEl.innerText = "🔍 猜猜這瓶飲料含有幾顆方糖？";
+      msgEl.style.color = "#c026d3";
+      
       document.getElementById('analysisBtn').style.display = 'none';
-      document.getElementById('submitBtn').disabled = false;
-      document.getElementById('submitBtn').style.opacity = "1";
+      
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = "1";
+      submitBtn.innerText = "提交作答";
       
       let nextDrink;
       do {
@@ -149,10 +156,9 @@
     }
 
     function addSugar() {
-      if (userSugarCount >= 25) return;
+      if (userSugarCount >= 25 || document.getElementById('submitBtn').disabled) return;
       
-      playClickSfx(); // 播放音效
-      
+      playClickSfx();
       userSugarCount++;
       updateCounter();
       
@@ -160,7 +166,8 @@
       cube.src = '方糖.png';
       cube.className = 'sugar-cube-icon';
       cube.onclick = function() {
-        playClickSfx(); // 移除時也播放音效
+        if (document.getElementById('submitBtn').disabled) return;
+        playClickSfx();
         this.remove();
         userSugarCount--;
         updateCounter();
@@ -176,22 +183,51 @@
       const msgEl = document.getElementById('msg');
       const sfxSuccess = document.getElementById('successSound');
       const sfxFail = document.getElementById('failSound');
+      const submitBtn = document.getElementById('submitBtn');
+      const analysisBtn = document.getElementById('analysisBtn');
+
+      attempts++; // 增加嘗試次數
 
       if (userSugarCount === currentDrink.sugar) {
+        // --- 答對時 ---
         sfxSuccess.currentTime = 0;
         sfxSuccess.play();
-        msgEl.innerHTML = `✅ 答對了！<b>${currentDrink.name}</b> 的糖量約為 <b>${currentDrink.sugar}</b> 顆方糖！`;
+        msgEl.innerHTML = `✅ 答對了！`;
         msgEl.style.color = "#16a34a";
+        
+        // 答對立刻顯示解析按鈕，並禁用提交
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = "0.5";
+        submitBtn.innerText = "挑戰成功";
+        analysisBtn.style.display = 'block';
+        
       } else {
+        // --- 答錯時 ---
         sfxFail.currentTime = 0;
         sfxFail.play();
-        const hint = userSugarCount > currentDrink.sugar ? "太多囉" : "太少囉";
-        msgEl.innerHTML = `❌ ${hint}！<b>${currentDrink.name}</b> 正確答案是 <b>${currentDrink.sugar}</b> 顆方糖！`;
+        msgEl.innerHTML = `❌ 答錯囉！`;
         msgEl.style.color = "#dc2626";
+
+        if (attempts >= 3) {
+          // 第三次答錯，結束作答並顯示解析按鈕
+          submitBtn.disabled = true;
+          submitBtn.style.opacity = "0.5";
+          submitBtn.innerText = "次數已滿";
+          analysisBtn.style.display = 'block';
+        } else {
+          // 還有機會，修改按鈕文字提示
+          const remain = 3 - attempts;
+          submitBtn.innerText = `再試一次 (剩餘 ${remain} 次)`;
+          
+          // 1.5秒後將上方提示字改回，引導使用者修改
+          setTimeout(() => {
+            if (!submitBtn.disabled) {
+              msgEl.innerText = "🔍 調整方糖數量後再次提交";
+              msgEl.style.color = "#c026d3";
+            }
+          }, 1500);
+        }
       }
-      document.getElementById('analysisBtn').style.display = 'block';
-      document.getElementById('submitBtn').disabled = true;
-      document.getElementById('submitBtn').style.opacity = "0.5";
     }
 
     function showAnalysis() {
@@ -208,6 +244,7 @@
       document.getElementById('overlay').style.display = 'none';
     }
 
+    // 初始化遊戲
     resetGame();
   </script>
 </body>
